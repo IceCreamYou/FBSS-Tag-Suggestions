@@ -1,0 +1,51 @@
+.fbssts_suggestions {
+  clear: both;
+  display: block;
+  margin: 0.5em 0;
+  padding: 0;
+}
+
+.fbssts_suggestions li {
+  background: none repeat scroll 0 0 transparent !important;
+  float: left !important;
+  list-style: none outside none !important;
+  margin: 0;
+  padding: 0.5em 2em !important;
+}
+
+.fbssts_floating_suggestions {
+  background-color: white;
+  display: none;
+  position: absolute;
+  width: 186px;
+}
+
+.fbssts_floating_suggestions li {
+  border: 1px solid #EEEEEE;
+  border-bottom: 0 none;
+  float: none;
+  width: 180px;
+  padding: 0.5em 2px !important;
+  margin: 0 !important;
+}
+
+.fbssts_floating_suggestions li a {
+  display: block;
+  text-decoration: none;
+}
+
+.fbssts_floating_suggestions li:hover {
+  background-color: #DDDDDD;
+}
+
+.fbssts_floating_suggestions li.last {
+  border-bottom: 1px solid #EEEEEE;
+}
+
+.fbssts_floating_suggestions .fbssts_suggestions {
+  margin: 0;
+}
+
+.fbssts_hidden {
+  display: none;
+}

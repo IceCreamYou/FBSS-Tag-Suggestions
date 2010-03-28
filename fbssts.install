@@ -1,0 +1,16 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   (Un)installs the Facebook-style Statuses Tag Suggestions module.
+ */
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function fbssts_uninstall() {
+  variable_del('fbssts_show_on_form');
+  variable_del('fbssts_count');
+  variable_del('fbssts_time');
+}

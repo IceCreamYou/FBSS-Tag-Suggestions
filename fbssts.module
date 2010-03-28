@@ -1,0 +1,237 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   Provides suggestions for tags to add to Facebook-style Statuses.
+ * @todo
+ *   - Work with usernames in addition to tags.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function fbssts_menu() {
+  $items = array();
+  $items['admin/settings/fbssts'] = array(
+    'title' => 'Facebook-style Statuses Tag Suggestions',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fbssts_admin'),
+    'access arguments' => array('administer site configuration'),
+    'description' => 'Allows administrators to adjust certain display settings for Facebook-style Statuses Tag Suggestions.',
+  );
+  $items['fbssts/load'] = array(
+    'title' => 'Load suggestions',
+    'page callback' => '_fbssts_autocomplete',
+    'access arguments' => array('use tag suggestions'),
+    'description' => 'Gets the HTML for use in the floating tag suggestion dialog.',
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function fbssts_perm() {
+  return array('use tag suggestions');
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ */
+function fbssts_form_facebook_status_box_alter(&$form, &$form_state) {
+  drupal_add_js(array('fbssts' => array(
+    'show_on_form' => variable_get('fbssts_show_on_form', 'on_hash')
+  )), 'setting');
+  $path = drupal_get_path('module', 'fbssts');
+  drupal_add_js($path .'/fbssts.js');
+  drupal_add_css($path .'/fbssts.css');
+  if (variable_get('fbssts_show_on_form', 'on_hash') == 'below_form' && user_access('use tag suggestions')) {
+    $form['fbss-submit']['#suffix'] = '<div class="fbssts_inline_suggestions">'. theme('fbssts_suggestions') .'</div>';
+  }
+}
+
+/**
+ * Implementation of hook_footer().
+ */
+function fbssts_footer($main = 0) {
+  return '<div class="fbssts_floating_suggestions">'. theme('fbssts_suggestions') .'</div>';
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function fbssts_theme($existing, $type, $theme, $path) {
+  return array(
+    'fbssts_suggestions' => array(
+      'arguments' => array(
+        'count' => NULL,
+        'time' => NULL,
+        'own' => FALSE
+      ),
+    ),
+    'fbssts_autocomplete_tags' => array(
+      'arguments' => array(
+        'part' => NULL,
+        'count' => NULL,
+        'time' => NULL,
+        'own' => FALSE,
+      ),
+    ),
+  );
+}
+
+/**
+ * Themes the tag suggestions.
+ */
+function theme_fbssts_suggestions($count = NULL, $time = NULL, $own = FALSE) {
+  if (!$count) {
+    $count = variable_get('fbssts_count', 5);
+  }
+  if (!$time) {
+    $time = variable_get('fbssts_time', 'all');
+  }
+  $tags = facebook_status_tags_popular_terms($count, $time, $own);
+  return _theme_fbssts_suggestions($tags);
+}
+
+/**
+ * Themes the tag suggestions.
+ */
+function theme_fbssts_autocomplete_tags($part, $count = NULL, $time = NULL, $own = FALSE) {
+  if (!$count) {
+    $count = variable_get('fbssts_count', 5);
+  }
+  if (!$time) {
+    $time = variable_get('fbssts_time', 'all');
+  }
+  $now = time();
+  $times = array(
+    'day' => $now - (60 * 60 * 24),
+    'week' => $now - (60 * 60 * 24 * 7),
+    'month' => $now - (60 * 60 * 24 * 30),
+    'year' => $now - (60 * 60 * 24 * 364),
+    'all' => 0,
+  );
+  $time = $times[$time];
+  $restrict = '';
+  if ($own) {
+    $restrict = 'f.uid = f.pid AND ';
+  }
+  $result = db_query_range("SELECT COUNT(t.sid) count, t.rid FROM {facebook_status_tags} t INNER JOIN {facebook_status} f ON t.sid = f.sid
+    WHERE ". $restrict ."t.type = 'term' AND f.status_time > %d AND t.name LIKE '%s%%' GROUP BY t.rid ORDER BY count DESC, t.sid DESC",
+    $time, $part, 0, $count);
+  $tags = array();
+  while ($obj = db_fetch_object($result)) {
+    $tags[] = taxonomy_get_term($obj->rid);
+  }
+  return _theme_fbssts_suggestions($tags);
+}
+
+/**
+ * The admin settings form.
+ */
+function fbssts_admin(&$form_state) {
+  $form = array();
+  $form['fbssts_show_on_form'] = array(
+    '#type' => 'radios',
+    '#title' => t('Show tag suggestions'),
+    '#default_value' => variable_get('fbssts_show_on_form', 'on_hash'),
+    '#options' => array(
+      'below_form' => t('Below the status update box'),
+      'on_hash' => t('In a drop-down list when the hash key (#) is pressed'),
+      'none' => t('Never'),
+    ),
+  );
+  $form['fbssts_count'] = array(
+    '#type' => 'select',
+    '#title' => t('Number of tags to suggest'),
+    '#default_value' => variable_get('fbssts_count', 5),
+    '#options' => drupal_map_assoc(range(1, 20)),
+  );
+  $options = drupal_map_assoc(array('day', 'week', 'month', 'year', 'all'));
+  $form['fbssts_time'] = array(
+    '#type' => 'select',
+    '#title' => t('Popular since'),
+    '#description' => t('Only consider statuses submitted within this time period while looking for popular tags.'),
+    '#default_value' => variable_get('fbssts_time', 'all'),
+    '#options' => $options,
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Helper function to theme suggestions.
+ * @param $tags
+ *   An array of taxonomy terms for statuses.
+ * @return
+ *   HTML for a list of terms.
+ */
+function _theme_fbssts_suggestions($tags) {
+  $items = array();
+  foreach ($tags as $term) {
+    $items[] = l($term->name, 'statuses/term/'. check_plain($term->name));
+  }
+  if (!empty($items)) {
+ 	  return theme('item_list', $items, NULL, 'ul', array('class' => 'fbssts_suggestions'));
+  }
+  return '';
+}
+
+/**
+ * Helper function to autocomplete tags.
+ */
+function _fbssts_autocomplete() {
+  $text = $_POST['text'];
+  $part = _fbssts_find_tag($text);
+  $length = drupal_strlen($part);
+  $part = _fbssts_clean_tag($part);
+  if ($part) {
+    echo '<span class="fbssts_hidden fbssts_part_length">'. $length .'</span>'. theme('fbssts_autocomplete_tags', $part);
+  }
+}
+
+/**
+ * Searches for tags in a string.
+ *
+ * Tags can be in the following formats:
+ *   - #hashtag
+ *   - @userreference
+ *   - [#tag with word-break characters]
+ *
+ * @param $subject
+ *   The text in which to replace tags.
+ * @return
+ *   A nested array of tags. The outer array is keyed by type ('@' and '#').
+ */
+function _fbssts_find_tag($subject) {
+  $pattern = '%((?:\A|(?<=\s))(?:#|@)(\w|(\p{L}\p{M}?))+$)|(\[(#|@)[^\]]+?(?!\])$)%u';
+  if (variable_get('facebook_status_tags_alt_pattern', FALSE)) {
+    $pattern = '%((?:\A|(?<=\s))(?:#|@)\w+$)|(\[(#|@)[^\]]+?(?!\])$)%u';
+  }
+  $matches = array();
+  preg_match_all($pattern, $subject, $matches);
+  if (!empty($matches[0])) {
+    $word = array_pop($matches[0]);
+    return $word;
+  }
+}
+
+/**
+ * Removes leading #, @, [#, or [@ from a tag.
+ * @param $tag
+ *   The tag to clean.
+ * @return
+ *   A cleaned tag.
+ */
+function _fbssts_clean_tag($tag) {
+  $one = drupal_substr($tag, 0, 1);
+  if ($one == '[') {
+    $tag = drupal_substr($tag, 2);
+  }
+  else {
+    $tag = drupal_substr($tag, 1);
+  }
+  return $tag;
+}

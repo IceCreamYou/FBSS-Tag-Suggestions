@@ -1,0 +1,7 @@
+; $Id$
+name = Facebook-style Statuses Tag Suggestions
+description = "Provides suggestions for tags to add to Facebook-style Statuses."
+dependencies[] = facebook_status
+dependencies[] = facebook_status_tags
+dependencies[] = taxonomy
+core = 6.x
