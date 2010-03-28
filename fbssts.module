@@ -41,13 +41,16 @@ function fbssts_perm() {
  * Implementation of hook_form_FORM_ID_alter().
  */
 function fbssts_form_facebook_status_box_alter(&$form, &$form_state) {
+  if (!user_access('use tag suggestions')) {
+    return;
+  }
   drupal_add_js(array('fbssts' => array(
     'show_on_form' => variable_get('fbssts_show_on_form', 'on_hash')
   )), 'setting');
   $path = drupal_get_path('module', 'fbssts');
   drupal_add_js($path .'/fbssts.js');
   drupal_add_css($path .'/fbssts.css');
-  if (variable_get('fbssts_show_on_form', 'on_hash') == 'below_form' && user_access('use tag suggestions')) {
+  if (variable_get('fbssts_show_on_form', 'on_hash') == 'below_form') {
     $form['fbss-submit']['#suffix'] = '<div class="fbssts_inline_suggestions">'. theme('fbssts_suggestions') .'</div>';
   }
 }
@@ -56,7 +59,7 @@ function fbssts_form_facebook_status_box_alter(&$form, &$form_state) {
  * Implementation of hook_footer().
  */
 function fbssts_footer($main = 0) {
-  return '<div class="fbssts_floating_suggestions">'. theme('fbssts_suggestions') .'</div>';
+  return '<div class="fbssts_floating_suggestions" style="display: none;">'. theme('fbssts_suggestions') .'</div>';
 }
 
 /**
@@ -136,11 +139,12 @@ function fbssts_admin(&$form_state) {
   $form = array();
   $form['fbssts_show_on_form'] = array(
     '#type' => 'radios',
-    '#title' => t('Show tag suggestions'),
+    '#title' => t('Show most popular tag suggestions'),
+    '#description' => t('Choose where to show the list of most popular tags. Autocompleted tags always appear in a drop-down list below the status update box.'),
     '#default_value' => variable_get('fbssts_show_on_form', 'on_hash'),
     '#options' => array(
-      'below_form' => t('Below the status update box'),
-      'on_hash' => t('In a drop-down list when the hash key (#) is pressed'),
+      'below_form' => t('Below the status update box as part of the form'),
+      'on_hash' => t('In a drop-down list when the hash key (#) or at key (@) is pressed'),
       'none' => t('Never'),
     ),
   );
