@@ -5,21 +5,21 @@ Drupal.behaviors.fbssts = function (context) {
   var fbssts_box_orig = fbssts_box.html();
   var t;
   dest.keypress(function(fbss_key) {
+    if (t) {
+      clearTimeout(t);
+    }
     if (fbss_key.which == 35 && Drupal.settings.fbssts.show_on_form == 'on_hash') {
-      if (t) {
-        clearTimeout(t);
-      }
       fbssts_box.html(fbssts_box_orig);
       $('.fbssts_floating_suggestions a').click(function() {
         var tag = $(this).html();
+        var textBeforeCursor = dest.textBeforeCursor(2);
+        var firstChar = textBeforeCursor.text.substring(0, 1);
         if (tag.match(/\W/)) {
           tag = '[#'+ tag +']';
         }
         else {
           tag = '#'+ tag;
         }
-        var textBeforeCursor = dest.textBeforeCursor(2);
-        var firstChar = textBeforeCursor.text.substring(0, 1);
         if (firstChar == '[' || textBeforeCursor.start < 1) {
           textBeforeCursor.replace(tag);
         }
@@ -36,25 +36,56 @@ Drupal.behaviors.fbssts = function (context) {
         return false;
       });
     }
+    else if (fbss_key.which == 64 && Drupal.settings.fbssts.show_on_form == 'on_hash') {
+      fbssts_box.load(Drupal.settings.basePath +'fbssts/load/users', function() {
+        $('.fbssts_floating_suggestions a').click(function() {
+          var tag = $(this).html();
+          var textBeforeCursor = dest.textBeforeCursor(2);
+          var firstChar = textBeforeCursor.text.substring(0, 1);
+          if (tag.match(/\W/)) {
+            tag = '[@'+ tag +']';
+          }
+          else {
+            tag = '@'+ tag;
+          }
+          if (firstChar == '[' || textBeforeCursor.start < 1) {
+            textBeforeCursor.replace(tag);
+          }
+          else {
+            textBeforeCursor.replace(firstChar + tag);
+          }
+          var fbss_remaining = Drupal.settings.facebook_status.maxlength - dest.val().length;
+          if (Drupal.settings.facebook_status.ttype == 'textfield' && fbss_remaining < 0) {
+            fbss_remaining = 0;
+          }
+          fbss_print_remaining(fbss_remaining, dest.parent().next());
+          fbssts_box.hide();
+          dest.focus();
+          return false;
+        });
+      });
+    }
     else if (fbss_key.which != 35) {
       fbssts_box.html('');
-      if (t) {
-        clearTimeout(t);
-      }
       t = setTimeout(function() {
         var textBeforeCursor = dest.textBeforeCursor(100);
         fbssts_box.load(Drupal.settings.basePath +'fbssts/load',
           {'text': textBeforeCursor.text},
           function() {
+            var tagStartsAt = textBeforeCursor.text.length - $('.fbssts_part_length').html();
             $('.fbssts_floating_suggestions a').click(function() {
               var tag = $(this).html();
+              var op = textBeforeCursor.text.substring(tagStartsAt, tagStartsAt+1);
+              if (op == '[') {
+                op = textBeforeCursor.text.substring(tagStartsAt+1, tagStartsAt+2);
+              }
               if (tag.match(/\W/)) {
-                tag = '[#'+ tag +']';
+                tag = '['+ op + tag +']';
               }
               else {
-                tag = '#'+ tag;
+                tag = op + tag;
               }
-              textBeforeCursor.replace(textBeforeCursor.text.substring(0, textBeforeCursor.text.length - $('.fbssts_part_length').html()) + tag);
+              textBeforeCursor.replace(textBeforeCursor.text.substring(0, tagStartsAt) + tag);
               var fbss_remaining = Drupal.settings.facebook_status.maxlength - dest.val().length;
               if (Drupal.settings.facebook_status.ttype == 'textfield' && fbss_remaining < 0) {
                 fbss_remaining = 0;

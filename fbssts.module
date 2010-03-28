@@ -27,6 +27,13 @@ function fbssts_menu() {
     'description' => 'Gets the HTML for use in the floating tag suggestion dialog.',
     'type' => MENU_CALLBACK,
   );
+  $items['fbssts/load/users'] = array(
+    'title' => 'Load popular user suggestions',
+    'page callback' => '_fbssts_popular_users',
+    'access arguments' => array('use tag suggestions'),
+    'description' => 'Gets the HTML for use in the floating tag suggestion dialog.',
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
@@ -51,7 +58,7 @@ function fbssts_form_facebook_status_box_alter(&$form, &$form_state) {
   drupal_add_js($path .'/fbssts.js');
   drupal_add_css($path .'/fbssts.css');
   if (variable_get('fbssts_show_on_form', 'on_hash') == 'below_form') {
-    $form['fbss-submit']['#suffix'] = '<div class="fbssts_inline_suggestions">'. theme('fbssts_suggestions') .'</div>';
+    $form['fbss-submit']['#suffix'] = '<div class="fbssts_inline_suggestions">'. theme('fbssts_popular_hashtags') .'</div>';
   }
 }
 
@@ -59,7 +66,7 @@ function fbssts_form_facebook_status_box_alter(&$form, &$form_state) {
  * Implementation of hook_footer().
  */
 function fbssts_footer($main = 0) {
-  return '<div class="fbssts_floating_suggestions" style="display: none;">'. theme('fbssts_suggestions') .'</div>';
+  return '<div class="fbssts_floating_suggestions" style="display: none;">'. theme('fbssts_popular_hashtags') .'</div>';
 }
 
 /**
@@ -67,14 +74,20 @@ function fbssts_footer($main = 0) {
  */
 function fbssts_theme($existing, $type, $theme, $path) {
   return array(
-    'fbssts_suggestions' => array(
+    'fbssts_popular_hashtags' => array(
       'arguments' => array(
         'count' => NULL,
         'time' => NULL,
         'own' => FALSE
       ),
     ),
-    'fbssts_autocomplete_tags' => array(
+    'fbssts_popular_users' => array(
+      'arguments' => array(
+        'count' => NULL,
+        'time' => NULL,
+      ),
+    ),
+    'fbssts_autocomplete_hashtags' => array(
       'arguments' => array(
         'part' => NULL,
         'count' => NULL,
@@ -82,13 +95,19 @@ function fbssts_theme($existing, $type, $theme, $path) {
         'own' => FALSE,
       ),
     ),
+    'fbssts_autocomplete_users' => array(
+      'arguments' => array(
+        'part' => NULL,
+        'count' => NULL,
+      ),
+    ),
   );
 }
 
 /**
- * Themes the tag suggestions.
+ * Themes popular hashtag suggestions.
  */
-function theme_fbssts_suggestions($count = NULL, $time = NULL, $own = FALSE) {
+function theme_fbssts_popular_hashtags($count = NULL, $time = NULL, $own = FALSE) {
   if (!$count) {
     $count = variable_get('fbssts_count', 5);
   }
@@ -96,13 +115,27 @@ function theme_fbssts_suggestions($count = NULL, $time = NULL, $own = FALSE) {
     $time = variable_get('fbssts_time', 'all');
   }
   $tags = facebook_status_tags_popular_terms($count, $time, $own);
-  return _theme_fbssts_suggestions($tags);
+  return _theme_fbssts_hashtags($tags);
 }
 
 /**
- * Themes the tag suggestions.
+ * Themes popular user suggestions.
  */
-function theme_fbssts_autocomplete_tags($part, $count = NULL, $time = NULL, $own = FALSE) {
+function theme_fbssts_popular_users($count = NULL, $time = NULL) {
+  if (!$count) {
+    $count = variable_get('fbssts_count', 5);
+  }
+  if (!$time) {
+    $time = variable_get('fbssts_time', 'all');
+  }
+  $users = facebook_status_tags_popular_users($count, $time);
+  return _theme_fbssts_users($users);
+}
+
+/**
+ * Themes autocompleted hashtag suggestions.
+ */
+function theme_fbssts_autocomplete_hashtags($part, $count = NULL, $time = NULL, $own = FALSE) {
   if (!$count) {
     $count = variable_get('fbssts_count', 5);
   }
@@ -129,7 +162,22 @@ function theme_fbssts_autocomplete_tags($part, $count = NULL, $time = NULL, $own
   while ($obj = db_fetch_object($result)) {
     $tags[] = taxonomy_get_term($obj->rid);
   }
-  return _theme_fbssts_suggestions($tags);
+  return _theme_fbssts_hashtags($tags);
+}
+
+/**
+ * Themes autocompleted user suggestions.
+ */
+function theme_fbssts_autocomplete_users($part, $count = NULL) {
+  if (!$count) {
+    $count = variable_get('fbssts_count', 5);
+  }
+  $result = db_query_range("SELECT uid FROM {users} WHERE LOWER(name) LIKE LOWER('%s%%') ORDER BY name ASC", $part, 0, $count);
+  $users = array();
+  while ($account = db_fetch_object($result)) {
+    $users[] = user_load(array('uid' => $account->uid));
+  }
+  return _theme_fbssts_users($users);
 }
 
 /**
@@ -166,16 +214,34 @@ function fbssts_admin(&$form_state) {
 }
 
 /**
- * Helper function to theme suggestions.
+ * Helper function to theme hashtag suggestions.
  * @param $tags
  *   An array of taxonomy terms for statuses.
  * @return
  *   HTML for a list of terms.
  */
-function _theme_fbssts_suggestions($tags) {
+function _theme_fbssts_hashtags($tags) {
   $items = array();
   foreach ($tags as $term) {
     $items[] = l($term->name, 'statuses/term/'. check_plain($term->name));
+  }
+  if (!empty($items)) {
+ 	  return theme('item_list', $items, NULL, 'ul', array('class' => 'fbssts_suggestions'));
+  }
+  return '';
+}
+
+/**
+ * Helper function to theme user suggestions.
+ * @param $users
+ *   An array of user objects.
+ * @return
+ *   HTML for a list of users.
+ */
+function _theme_fbssts_users($users) {
+  $items = array();
+  foreach ($users as $account) {
+    $items[] = l($account->name, 'user/'. $account->uid);
   }
   if (!empty($items)) {
  	  return theme('item_list', $items, NULL, 'ul', array('class' => 'fbssts_suggestions'));
@@ -190,9 +256,16 @@ function _fbssts_autocomplete() {
   $text = $_POST['text'];
   $part = _fbssts_find_tag($text);
   $length = drupal_strlen($part);
-  $part = _fbssts_clean_tag($part);
+  $result = _fbssts_clean_tag($part);
+  $part = $result['tag'];
+  $prefix = $result['prefix'];
   if ($part) {
-    echo '<span class="fbssts_hidden fbssts_part_length">'. $length .'</span>'. theme('fbssts_autocomplete_tags', $part);
+    if ($prefix == '#') {
+      echo '<span class="fbssts_hidden fbssts_part_length">'. $length .'</span>'. theme('fbssts_autocomplete_hashtags', $part);
+    }
+    else if ($prefix == '@') {
+      echo '<span class="fbssts_hidden fbssts_part_length">'. $length .'</span>'. theme('fbssts_autocomplete_users', $part);
+    }
   }
 }
 
@@ -227,15 +300,24 @@ function _fbssts_find_tag($subject) {
  * @param $tag
  *   The tag to clean.
  * @return
- *   A cleaned tag.
+ *   An associative array with the clean tag ('tag') and the prefix ('prefix').
  */
 function _fbssts_clean_tag($tag) {
   $one = drupal_substr($tag, 0, 1);
   if ($one == '[') {
+    $prefix = drupal_substr($tag, 1, 1);
     $tag = drupal_substr($tag, 2);
   }
   else {
+    $prefix = $one;
     $tag = drupal_substr($tag, 1);
   }
-  return $tag;
+  return array('tag' => $tag, 'prefix' => $prefix);
+}
+
+/**
+ * Helper function to load the most popular users via AJAX.
+ */
+function _fbssts_popular_users() {
+  echo theme('fbssts_popular_users');
 }
