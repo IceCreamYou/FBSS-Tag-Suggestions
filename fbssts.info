@@ -1,4 +1,3 @@
-; $Id$
 name = Facebook-style Statuses Tag Suggestions
 description = "Provides suggestions for tags to add to Facebook-style Statuses."
 dependencies[] = facebook_status

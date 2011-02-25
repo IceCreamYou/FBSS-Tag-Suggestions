@@ -1,4 +1,3 @@
-// $Id$
 Drupal.behaviors.fbssts = function (context) {
   var dest = $('.facebook_status_text:first');
   var fbssts_box = $('.fbssts_floating_suggestions');
