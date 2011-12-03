@@ -3,4 +3,5 @@ description = "Provides suggestions for tags to add to Facebook-style Statuses."
 dependencies[] = facebook_status
 dependencies[] = facebook_status_tags
 dependencies[] = taxonomy
+package = Facebook-style Statuses
 core = 6.x

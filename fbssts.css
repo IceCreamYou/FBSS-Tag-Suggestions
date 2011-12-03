@@ -1,51 +1,33 @@
-.fbssts_suggestions {
-  clear: both;
-  display: block;
-  margin: 0.5em 0;
-  padding: 0;
-}
-
-.fbssts_suggestions li {
-  background: none repeat scroll 0 0 transparent !important;
-  float: left !important;
-  list-style: none outside none !important;
-  margin: 0;
-  padding: 0.5em 2em !important;
-}
-
-.fbssts_floating_suggestions {
-  background-color: white;
+.fbssts-suggestions {
+  background-color: #EEEEEE;
   display: none;
-  position: absolute;
-  width: 186px;
+  z-index: 100;
 }
 
-.fbssts_floating_suggestions li {
-  border: 1px solid #EEEEEE;
+.item-list ul.fbssts-suggestion-list li {
+  background: none;
+  border: 1px solid #CCCCCC;
   border-bottom: 0 none;
   float: none;
-  width: 180px;
-  padding: 0.5em 2px !important;
-  margin: 0 !important;
+  list-style-image: none;
+  list-style-type: none;
+  margin: 0;
+  padding: 0.5em;
+  width: 15em;
 }
 
-.fbssts_floating_suggestions li a {
-  display: block;
-  text-decoration: none;
-}
-
-.fbssts_floating_suggestions li:hover {
+.item-list ul.fbssts-suggestion-list li:hover {
   background-color: #DDDDDD;
 }
 
-.fbssts_floating_suggestions li.last {
-  border-bottom: 1px solid #EEEEEE;
+.item-list ul.fbssts-suggestion-list li.last {
+  border-bottom: 1px solid #CCCCCC;
 }
 
-.fbssts_floating_suggestions .fbssts_suggestions {
+.item-list ul.fbssts-suggestion-list {
   margin: 0;
 }
 
-.fbssts_hidden {
+.fbssts-hidden {
   display: none;
 }

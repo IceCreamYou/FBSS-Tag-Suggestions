@@ -1,112 +1,68 @@
 Drupal.behaviors.fbssts = function (context) {
-  var dest = $('.facebook_status_text:first');
-  var fbssts_box = $('.fbssts_floating_suggestions');
-  var fbssts_box_orig = fbssts_box.html();
+  var dest = $('.facebook-status-text:first', context);
+  var fbssts_box = $('.fbssts-suggestions');
   var t;
+  var maxlen = Drupal.settings.facebook_status.maxlength;
+  fbssts_box.css('left', dest.offset().left);
+  fbssts_box.css('top', dest.offset().top + dest.outerHeight() + 1);
   dest.keypress(function(fbss_key) {
-    if (fbss_key.which == 35 && Drupal.settings.fbssts.show_on_form == 'on_hash') {
-      if (t) {
-        clearTimeout(t);
-      }
-      fbssts_box.html(fbssts_box_orig);
-      $('.fbssts_floating_suggestions a').click(function() {
-        var tag = $(this).html();
-        if (tag.match(/\W/)) {
-          tag = '[#'+ tag +']';
-        }
-        else {
-          tag = '#'+ tag;
-        }
-        var textBeforeCursor = dest.textBeforeCursor(2);
-        var firstChar = textBeforeCursor.text.substring(0, 1);
-        if (firstChar == '[' || textBeforeCursor.start < 1) {
-          textBeforeCursor.replace(tag);
-        }
-        else {
-          textBeforeCursor.replace(firstChar + tag);
-        }
-        var fbss_remaining = Drupal.settings.facebook_status.maxlength - dest.val().length;
-        if (Drupal.settings.facebook_status.ttype == 'textfield' && fbss_remaining < 0) {
-          fbss_remaining = 0;
-        }
-        fbss_print_remaining(fbss_remaining, dest.parent().next());
-        fbssts_box.hide();
-        dest.focus();
-        return false;
-      });
+    if (t) {
+      clearTimeout(t);
     }
-    else if (fbss_key.which != 35) {
-      fbssts_box.html('');
-      if (t) {
-        clearTimeout(t);
-      }
+    if (fbss_key.which != 35 && fbss_key.which != 64) {
+      fbssts_box.empty();
       t = setTimeout(function() {
+        // Get the last 100 characters before the cursor.
         var textBeforeCursor = dest.textBeforeCursor(100);
-        fbssts_box.load(Drupal.settings.basePath +'fbssts/load',
+        // Check if these characters could contain a tag.
+        if (textBeforeCursor.text.indexOf('#') < 0 && textBeforeCursor.text.indexOf('@') < 0) {
+          return;
+        }
+        // We might have a tag, so load in our suggestions.
+        fbssts_box.load(Drupal.settings.basePath +'index.php?q=fbssts/load',
           {'text': textBeforeCursor.text},
-          function() {
-            $('.fbssts_floating_suggestions a').click(function() {
+          function(response) {
+            if (!response) {
+              return;
+            }
+            fbssts_box.css('display', 'inline-block');
+            var tagStartsAt = textBeforeCursor.text.length - $('.fbssts-part-length').html();
+            $('.fbssts-suggestions li').click(function() {
               var tag = $(this).html();
+              var op = textBeforeCursor.text.substring(tagStartsAt, tagStartsAt+1);
+              if (op == '[') {
+                op = textBeforeCursor.text.substring(tagStartsAt+1, tagStartsAt+2);
+              }
               if (tag.match(/\W/)) {
-                tag = '[#'+ tag +']';
+                tag = '['+ op + tag +']';
               }
               else {
-                tag = '#'+ tag;
+                tag = op + tag;
               }
-              textBeforeCursor.replace(textBeforeCursor.text.substring(0, textBeforeCursor.text.length - $('.fbssts_part_length').html()) + tag);
-              var fbss_remaining = Drupal.settings.facebook_status.maxlength - dest.val().length;
-              if (Drupal.settings.facebook_status.ttype == 'textfield' && fbss_remaining < 0) {
-                fbss_remaining = 0;
+              textBeforeCursor.replace(textBeforeCursor.text.substring(0, tagStartsAt) + tag);
+              if (maxlen > 0) {
+                fbss_print_remaining(maxlen - dest.val().length, dest.parents('.facebook-status-update').find('.facebook-status-chars'));
               }
-              fbss_print_remaining(fbss_remaining, dest.parent().next());
               fbssts_box.hide();
               dest.focus();
               return false;
             });
           }
         );
-      }, 250);
+      }, 333);
     }
-    fbssts_box.show();
-    fbssts_box.css('left', dest.offset().left);
-    fbssts_box.css('top', dest.offset().top + dest.outerHeight() + 1);
   });
   dest.blur(function() {
     var t2 = setTimeout(function() { fbssts_box.hide(); }, 250);
   });
-  if (Drupal.settings.fbssts.show_on_form == 'below_form') {
-    $('.fbssts_inline_suggestions a').click(function() {
-      var tag = $(this).html();
-      if (tag.match(/\W/)) {
-        tag = '[#'+ tag +']';
-      }
-      else {
-        tag = '#'+ tag;
-      }
-      var textBeforeCursor = dest.textBeforeCursor(1);
-      if (textBeforeCursor.text.match(/\S/)) {
-        textBeforeCursor.replace(textBeforeCursor.text +' '+ tag);
-      }
-      else {
-        textBeforeCursor.replace(textBeforeCursor.text + tag);
-      }
-      var fbss_remaining = Drupal.settings.facebook_status.maxlength - dest.val().length;
-      if (Drupal.settings.facebook_status.ttype == 'textfield' && fbss_remaining < 0) {
-        fbss_remaining = 0;
-      }
-      fbss_print_remaining(fbss_remaining, dest.parent().next());
-      dest.focus();
-      return false;
-    });
-  }
 }
 
 /**
  * Inspired by http://plugins.jquery.com/project/jCaret
  */
-$.fn.textBeforeCursor=function(distanceBefore) {
-  var t=this[0];
-  if($.browser.msie){
+$.fn.textBeforeCursor = function(distanceBefore) {
+  var t = this[0];
+  if($.browser.msie) {
     var range = document.selection.createRange();
     var stored_range = range.duplicate();
     stored_range.moveToElementText(t);
