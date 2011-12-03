@@ -131,18 +131,18 @@ function _fbssts_get_suggestions($type, $part, $count, $own, $exclude = array())
   return $suggestions;
 }
 
-function _fbssts_get_all_user_suggestions($part, $count, $exclude) {
+function _fbssts_get_all_user_suggestions($part, $count, $exclude = array()) {
   $args = array($part);
   $ex = "";
   if ($exclude) {
     $ids = array();
-    foreach ($existing as $item) {
+    foreach ($exclude as $item) {
       if ($item->type == 'user') {
         $ids[] = $item->id;
       }
     }
     if ($ids) {
-      $ex = "AND u.uid NOT IN (". db_placeholders($ids) .")";
+      $ex = "AND uid NOT IN (". db_placeholders($ids) .")";
       $args = array_merge($args, $ids);
     }
   }

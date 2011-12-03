@@ -1,5 +1,8 @@
 Drupal.behaviors.fbssts = function (context) {
-  var dest = $('.facebook-status-text:first', context);
+  var dest = $(context).find('.facebook-status-text:first');
+  if (!dest || !dest.length) {
+    return;
+  }
   var fbssts_box = $('.fbssts-suggestions');
   var t;
   var maxlen = Drupal.settings.facebook_status.maxlength;
@@ -12,8 +15,18 @@ Drupal.behaviors.fbssts = function (context) {
     if (fbss_key.which != 35 && fbss_key.which != 64) {
       fbssts_box.empty();
       t = setTimeout(function() {
-        // Get the last 100 characters before the cursor.
-        var textBeforeCursor = dest.textBeforeCursor(100);
+        // Get the last 30 characters before the cursor so we can look for a tag.
+        // 30 was chosen because it is longer than the longest word in the
+        // English language (antidisestablishmentarianism - 28 characters);
+        // much longer than the average Twitter #hashtag (probably around 8
+        // characters); and about 6 times the average English word length
+        // (about 5.1). The maximum length of a Drupal username is 60
+        // characters, and the maximum length of a taxonomy term is 255
+        // characters -- but while it is *possible* to have a tag that is
+        // longer than what we're checking for, if you've already typed 30
+        // characters, you've pretty much defeated the point of having a
+        // suggestion already. Meanwhile, we save AJAX calls.
+        var textBeforeCursor = dest.textBeforeCursor(30);
         // Check if these characters could contain a tag.
         if (textBeforeCursor.text.indexOf('#') < 0 && textBeforeCursor.text.indexOf('@') < 0) {
           return;
