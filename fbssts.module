@@ -79,10 +79,11 @@ function theme_fbssts($type, $part) {
 
 function fbssts_get_suggestions($type, $part, $count) {
   $s = _fbssts_get_suggestions($type, $part, $count, TRUE);
-  if (count($s) < $count) {
+  $c = count($s);
+  if ($c < $count) {
     $t = $type == 'term' ?
-      _fbssts_get_suggestions($type, $part, $count, FALSE, $s) :
-      _fbssts_get_all_user_suggestions($part, $count, $s);
+      _fbssts_get_suggestions($type, $part, $count - $c, FALSE, $s) :
+      _fbssts_get_all_user_suggestions($part, $count - $c, $s);
     $s = array_merge($s, $t);
   }
   return $s;
