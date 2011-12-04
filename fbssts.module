@@ -92,9 +92,9 @@ function fbssts_get_suggestions($type, $part, $count) {
 function _fbssts_get_suggestions($type, $part, $count, $own, $exclude = array()) {
   $where = array("t.type = '%s'", "t.name LIKE '%s%%'");
   $args = array($type, $part);
-  if (variable_get('fbssts_time', 604800)) {
+  if (variable_get('fbssts_time', '')) {
     $where[] = "f.created > %d";
-    $args[] = time() - variable_get('fbssts_time', 604800);
+    $args[] = time() - variable_get('fbssts_time', '');
   }
   if ($own) {
     $where[] = "f.sender = %d";

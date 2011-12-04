@@ -19,10 +19,10 @@ function fbssts_admin(&$form_state) {
     '#type' => 'textfield',
     '#title' => t('Popular since'),
     '#description' => t('Only consider statuses submitted within this time period while looking for popular tags. Leave this blank to consider all statuses from any time.'),
-    '#field_suffix' => ' '. t('seconds'),
+    '#field_suffix' => ' '. t('seconds ago'),
     '#maxlength' => 11,
     '#size' => 11,
-    '#default_value' => variable_get('fbssts_time', 604800),
+    '#default_value' => variable_get('fbssts_time', ''),
   );
   return system_settings_form($form);
 }
